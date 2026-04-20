@@ -1,4 +1,5 @@
-/*********************************************************
+console.log("🔥 APP.JS NUEVO CARGADO");
+alert("APP NUEVA OK");/*********************************************************
  * DELICIAS PWA - UBER EATS PRO (VANILLA JS VERSION)
  * Compatible with: index.html + style.css + app.js
  *********************************************************/
