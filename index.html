@@ -1,43 +1,40 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Delicias</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Delicias | Delivery</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
 </head>
-
 <body>
 
-  <!-- HEADER -->
-  <header class="header">
-    <h1>🍛 Delicias</h1>
+    <header class="main-header">
+        <div class="header-top">
+            <h1>Delicias</h1>
+            <div class="delivery-badge"><i class="ph ph-moped"></i> 15-30 min</div>
+        </div>
+        <div class="search-container">
+            <i class="ph ph-magnifying-glass"></i>
+            <input type="text" id="search-input" placeholder="¿Qué se te antoja hoy?">
+        </div>
+    </header>
 
-    <input 
-      id="search" 
-      class="search" 
-      placeholder="Buscar comida..."
-    />
-  </header>
+    <nav class="categories-nav" id="categories-container">
+        </nav>
 
-  <!-- CATEGORÍAS -->
-  <div class="categories">
-    <button data-category="all">Todo</button>
-    <button data-category="food">Comida</button>
-    <button data-category="combo">Combos</button>
-    <button data-category="drink">Bebidas</button>
-  </div>
+    <main class="menu-container" id="menu-grid">
+        </main>
 
-  <!-- MENÚ -->
-  <main id="menu-list" class="menu"></main>
+    <div id="cart-floating-btn" class="cart-btn hidden">
+        <div class="cart-btn-content">
+            <span id="cart-count">0</span>
+            <span>Ver Carrito</span>
+            <span id="cart-total">$0.00</span>
+        </div>
+    </div>
 
-  <!-- BOTÓN CHECKOUT -->
-  <button id="checkout-btn" class="checkout-btn">
-    Ver pedido
-  </button>
-
-  <!-- SCRIPTS -->
-  <script src="app.js"></script>
-
+    <script src="app.js"></script>
 </body>
 </html>
