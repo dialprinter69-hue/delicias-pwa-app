@@ -1,8 +1,23 @@
 {
-  "name": "Delicias",
   "short_name": "Delicias",
-  "start_url": ".",
+  "name": "Delicias Restaurant & Delivery",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192?text=D",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://via.placeholder.com/512?text=Delicias",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/index.html",
+  "background_color": "#FFFFFF",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000"
+  "scope": "/",
+  "theme_color": "#06C167",
+  "description": "Ordena la mejor comida de Delicias directamente a tu puerta.",
+  "orientation": "portrait"
 }
