@@ -1,94 +1,61 @@
-const CONFIG = {
-    WHATSAPP_NUMBER: "19785027983",
-    DELIVERY_FEE: 5.00,
-    MENU_URL: "https://raw.githubusercontent.com/dialprinter69-hue/delicia-menu/refs/heads/main/menu.json"
-};
-
-let menuData = [];
-let cart = [];
-
-// 1. Cargar Menú
-async function init() {
-    try {
-        const response = await fetch(CONFIG.MENU_URL);
-        menuData = await response.json();
-        renderCategories();
-        renderMenu(menuData);
-    } catch (err) {
-        console.error("Error cargando menú:", err);
-    }
+:root {
+    --primary: #06C167;
+    --bg: #FFFFFF;
+    --secondary-bg: #F6F6F6;
+    --text-main: #000000;
+    --text-muted: #545454;
+    --shadow: 0 4px 12px rgba(0,0,0,0.08);
+    --radius: 12px;
 }
 
-// 2. Renderizar Categorías (Chips)
-function renderCategories() {
-    const container = document.getElementById('categories-container');
-    const categories = ["Todos", ...new Set(menuData.map(item => item.categoria))];
-    
-    container.innerHTML = categories.map(cat => `
-        <div class="category-chip ${cat === 'Todos' ? 'active' : ''}" onclick="filterByCategory('${cat}', this)">
-            ${cat}
-        </div>
-    `).join('');
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+body { background-color: var(--bg); color: var(--text-main); padding-bottom: 110px; }
+
+/* Header */
+.main-header {
+    position: sticky; top: 0; background: white; z-index: 100;
+    padding: 15px; border-bottom: 1px solid #eee;
 }
+.header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.delivery-badge { background: var(--secondary-bg); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
 
-// 3. Renderizar Productos
-function renderMenu(items) {
-    const grid = document.getElementById('menu-grid');
-    grid.innerHTML = items.map(item => `
-        <div class="product-card" onclick="addToCart(${item.id})">
-            <div class="product-info">
-                <h3>${item.nombre}</h3>
-                <p>${item.descripcion}</p>
-                <span class="product-price">$${item.precio.toFixed(2)}</span>
-            </div>
-            <img src="${item.imagen}" class="product-img" alt="${item.nombre}">
-        </div>
-    `).join('');
+.search-container {
+    background: var(--secondary-bg); display: flex; align-items: center;
+    padding: 10px 15px; border-radius: 25px;
 }
+.search-container input { background: none; border: none; outline: none; margin-left: 10px; width: 100%; font-size: 1rem; }
 
-// 4. Carrito y Estado
-function addToCart(id) {
-    const item = menuData.find(p => p.id === id);
-    cart.push(item);
-    updateCartUI();
+/* Categorías */
+.categories-nav { display: flex; overflow-x: auto; padding: 15px; gap: 10px; scrollbar-width: none; }
+.categories-nav::-webkit-scrollbar { display: none; }
+.category-chip {
+    background: var(--secondary-bg); padding: 8px 18px; border-radius: 20px;
+    white-space: nowrap; font-size: 0.9rem; font-weight: 500; cursor: pointer;
 }
+.category-chip.active { background: var(--text-main); color: white; }
 
-function updateCartUI() {
-    const btn = document.getElementById('cart-floating-btn');
-    const total = cart.reduce((sum, item) => sum + item.precio, 0);
-    
-    if (cart.length > 0) {
-        btn.classList.remove('hidden');
-        document.getElementById('cart-count').innerText = `${cart.length} items`;
-        document.getElementById('cart-total').innerText = `$${total.toFixed(2)}`;
-    }
+/* Grid de Menú */
+.menu-container { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 0 15px; }
+
+.product-card {
+    display: flex; align-items: center; gap: 15px; padding: 15px 0;
+    border-bottom: 1px solid #f0f0f0; cursor: pointer;
 }
+.product-info { flex: 1; }
+.product-info h3 { font-size: 1rem; margin-bottom: 4px; font-weight: 600; }
+.product-info p { font-size: 0.85rem; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.product-price { font-weight: 600; margin-top: 8px; display: block; font-size: 0.95rem; }
+.product-img { width: 90px; height: 90px; object-fit: cover; border-radius: 8px; background: #f9f9f9; }
 
-// 5. Búsqueda y Filtros
-document.getElementById('search-input').addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase();
-    const filtered = menuData.filter(p => 
-        p.nombre.toLowerCase().includes(term) || 
-        p.descripcion.toLowerCase().includes(term)
-    );
-    renderMenu(filtered);
-});
-
-function filterByCategory(cat, element) {
-    document.querySelectorAll('.category-chip').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
-    
-    const filtered = cat === "Todos" ? menuData : menuData.filter(p => p.categoria === cat);
-    renderMenu(filtered);
+/* Botón Flotante */
+.cart-btn {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    width: 90%; max-width: 450px; background: var(--primary);
+    color: white; padding: 18px; border-radius: var(--radius);
+    box-shadow: 0 8px 20px rgba(6,193,103,0.3); z-index: 1000;
 }
+.cart-btn-content { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+#cart-count { background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 4px; }
 
-// 6. Checkout WhatsApp
-document.getElementById('cart-floating-btn').addEventListener('click', () => {
-    const total = cart.reduce((sum, item) => sum + item.precio, 0) + CONFIG.DELIVERY_FEE;
-    const itemsList = cart.map(i => `- ${i.nombre} ($${i.precio})`).join('%0A');
-    
-    const msg = `*Nueva Orden - Delicias*%0A${itemsList}%0A%0A*Delivery:* $${CONFIG.DELIVERY_FEE}%0A*Total:* $${total.toFixed(2)}`;
-    window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${msg}`, '_blank');
-});
-
-init();
+.hidden { display: none; }
