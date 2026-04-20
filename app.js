@@ -1,226 +1,94 @@
-console.log("🔥 APP.JS NUEVO CARGADO");
-alert("APP NUEVA OK");/*********************************************************
- * DELICIAS PWA - UBER EATS PRO (VANILLA JS VERSION)
- * Compatible with: index.html + style.css + app.js
- *********************************************************/
-
 const CONFIG = {
-  remoteMenuJsonUrl:
-    "https://raw.githubusercontent.com/dialprinter69-hue/delicia-menu/refs/heads/main/menu.json",
-  restaurantWhatsappE164: "19785027983",
-  deliveryFee: 4.0,
+    WHATSAPP_NUMBER: "19785027983",
+    DELIVERY_FEE: 5.00,
+    MENU_URL: "https://raw.githubusercontent.com/dialprinter69-hue/delicia-menu/refs/heads/main/menu.json"
 };
 
-const state = {
-  menu: [],
-  cart: {},
-  search: "",
-  category: "all",
-  loading: true,
-};
+let menuData = [];
+let cart = [];
 
-// ----------------------
-// INIT
-// ----------------------
-
-document.addEventListener("DOMContentLoaded", init);
-
+// 1. Cargar Menú
 async function init() {
-  bindUI();
-  await loadMenu();
-  render();
+    try {
+        const response = await fetch(CONFIG.MENU_URL);
+        menuData = await response.json();
+        renderCategories();
+        renderMenu(menuData);
+    } catch (err) {
+        console.error("Error cargando menú:", err);
+    }
 }
 
-// ----------------------
-// FETCH MENU
-// ----------------------
-
-async function loadMenu() {
-  try {
-    const res = await fetch(CONFIG.remoteMenuJsonUrl);
-    const data = await res.json();
-    state.menu = Array.isArray(data) ? data : [];
-  } catch (e) {
-    state.menu = [];
-  }
-  state.loading = false;
-}
-
-// ----------------------
-// UI BINDINGS
-// ----------------------
-
-function bindUI() {
-  const search = document.getElementById("search");
-  if (search) {
-    search.addEventListener("input", (e) => {
-      state.search = e.target.value;
-      render();
-    });
-  }
-
-  document.querySelectorAll("[data-category]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      state.category = btn.dataset.category;
-      render();
-    });
-  });
-
-  const checkoutBtn = document.getElementById("checkout-btn");
-  if (checkoutBtn) {
-    checkoutBtn.addEventListener("click", openCheckout);
-  }
-}
-
-// ----------------------
-// CART LOGIC
-// ----------------------
-
-function addToCart(id) {
-  state.cart[id] = (state.cart[id] || 0) + 1;
-  render();
-}
-
-function removeFromCart(id) {
-  state.cart[id] = (state.cart[id] || 0) - 1;
-  if (state.cart[id] <= 0) delete state.cart[id];
-  render();
-}
-
-function cartCount() {
-  return Object.values(state.cart).reduce((a, b) => a + b, 0);
-}
-
-function cartTotal() {
-  let total = 0;
-  for (const id in state.cart) {
-    const item = state.menu.find((m) => m.id === id);
-    if (!item) continue;
-    const price = parsePrice(item.price);
-    total += price * state.cart[id];
-  }
-  return total + CONFIG.deliveryFee;
-}
-
-function parsePrice(price) {
-  return Number(String(price).replace("$", "")) || 0;
-}
-
-// ----------------------
-// FILTERS
-// ----------------------
-
-function getFilteredMenu() {
-  return state.menu.filter((item) => {
-    const matchSearch = item.name
-      .toLowerCase()
-      .includes(state.search.toLowerCase());
-
-    const matchCategory =
-      state.category === "all" || (item.category || "food") === state.category;
-
-    return matchSearch && matchCategory;
-  });
-}
-
-// ----------------------
-// RENDER
-// ----------------------
-
-function render() {
-  renderMenu();
-  renderCartBar();
-}
-
-function renderMenu() {
-  const container = document.getElementById("menu-list");
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  if (state.loading) {
-    container.innerHTML = "<p>Cargando menú...</p>";
-    return;
-  }
-
-  const items = getFilteredMenu();
-
-  if (items.length === 0) {
-    container.innerHTML = "<p>No hay resultados</p>";
-    return;
-  }
-
-  items.forEach((item) => {
-    const card = document.createElement("div");
-    card.className = "card";
-
-    card.innerHTML = `
-      <img src="${item.imageUrl || ''}" class="card-img" />
-      <div class="card-body">
-        <h3>${item.name}</h3>
-        <p>${item.description || ""}</p>
-        <div class="card-footer">
-          <span class="price">${item.price}</span>
-          <div class="qty">
-            <button onclick="removeFromCart('${item.id}')">-</button>
-            <span>${state.cart[item.id] || 0}</span>
-            <button onclick="addToCart('${item.id}')">+</button>
-          </div>
+// 2. Renderizar Categorías (Chips)
+function renderCategories() {
+    const container = document.getElementById('categories-container');
+    const categories = ["Todos", ...new Set(menuData.map(item => item.categoria))];
+    
+    container.innerHTML = categories.map(cat => `
+        <div class="category-chip ${cat === 'Todos' ? 'active' : ''}" onclick="filterByCategory('${cat}', this)">
+            ${cat}
         </div>
-      </div>
-    `;
-
-    container.appendChild(card);
-  });
+    `).join('');
 }
 
-function renderCartBar() {
-  let bar = document.getElementById("cart-bar");
-
-  if (!bar) {
-    bar = document.createElement("div");
-    bar.id = "cart-bar";
-    document.body.appendChild(bar);
-  }
-
-  const count = cartCount();
-
-  if (count === 0) {
-    bar.style.display = "none";
-    return;
-  }
-
-  bar.style.display = "block";
-  bar.innerHTML = `🛒 ${count} items · Ver pedido · $${cartTotal().toFixed(2)}`;
-
-  bar.onclick = openCheckout;
+// 3. Renderizar Productos
+function renderMenu(items) {
+    const grid = document.getElementById('menu-grid');
+    grid.innerHTML = items.map(item => `
+        <div class="product-card" onclick="addToCart(${item.id})">
+            <div class="product-info">
+                <h3>${item.nombre}</h3>
+                <p>${item.descripcion}</p>
+                <span class="product-price">$${item.precio.toFixed(2)}</span>
+            </div>
+            <img src="${item.imagen}" class="product-img" alt="${item.nombre}">
+        </div>
+    `).join('');
 }
 
-// ----------------------
-// CHECKOUT + WHATSAPP
-// ----------------------
-
-function openCheckout() {
-  const phone = CONFIG.restaurantWhatsappE164;
-
-  let msg = "🍽️ NUEVO PEDIDO\n\n";
-
-  for (const id in state.cart) {
-    const item = state.menu.find((m) => m.id === id);
-    if (!item) continue;
-    msg += `${state.cart[id]}x ${item.name}\n`;
-  }
-
-  msg += `\nTotal: $${cartTotal().toFixed(2)}`;
-
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-  window.open(url, "_blank");
-
-  state.cart = {};
-  render();
+// 4. Carrito y Estado
+function addToCart(id) {
+    const item = menuData.find(p => p.id === id);
+    cart.push(item);
+    updateCartUI();
 }
 
-// Expose global functions (for inline onclick)
-window.addToCart = addToCart;
-window.removeFromCart = removeFromCart;
-window.openCheckout = openCheckout;
+function updateCartUI() {
+    const btn = document.getElementById('cart-floating-btn');
+    const total = cart.reduce((sum, item) => sum + item.precio, 0);
+    
+    if (cart.length > 0) {
+        btn.classList.remove('hidden');
+        document.getElementById('cart-count').innerText = `${cart.length} items`;
+        document.getElementById('cart-total').innerText = `$${total.toFixed(2)}`;
+    }
+}
+
+// 5. Búsqueda y Filtros
+document.getElementById('search-input').addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase();
+    const filtered = menuData.filter(p => 
+        p.nombre.toLowerCase().includes(term) || 
+        p.descripcion.toLowerCase().includes(term)
+    );
+    renderMenu(filtered);
+});
+
+function filterByCategory(cat, element) {
+    document.querySelectorAll('.category-chip').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    
+    const filtered = cat === "Todos" ? menuData : menuData.filter(p => p.categoria === cat);
+    renderMenu(filtered);
+}
+
+// 6. Checkout WhatsApp
+document.getElementById('cart-floating-btn').addEventListener('click', () => {
+    const total = cart.reduce((sum, item) => sum + item.precio, 0) + CONFIG.DELIVERY_FEE;
+    const itemsList = cart.map(i => `- ${i.nombre} ($${i.precio})`).join('%0A');
+    
+    const msg = `*Nueva Orden - Delicias*%0A${itemsList}%0A%0A*Delivery:* $${CONFIG.DELIVERY_FEE}%0A*Total:* $${total.toFixed(2)}`;
+    window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+});
+
+init();
