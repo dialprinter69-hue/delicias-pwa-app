@@ -1,59 +1,122 @@
-/**
- * APP.JS - Delicias Restaurante 
- * Versión Final Optimizada (Uber Eats Style)
- */
-
 const CONFIG = {
     WHATSAPP_NUMBER: "19785027983",
     DELIVERY_FEE: 5.00,
-    // URL de GitHub optimizada para evitar caché
+    // URL limpia sin refs/heads
     MENU_URL: "https://raw.githubusercontent.com/dialprinter69-hue/delicia-menu/main/menu.json"
 };
 
 let menuData = [];
 let cart = [];
 
-/**
- * 1. INICIALIZACIÓN
- */
 async function init() {
     const grid = document.getElementById('menu-grid');
-    console.log("Intentando cargar menú...");
+    console.log("Cargando menú desde:", CONFIG.MENU_URL);
 
     try {
-        // El "?t=" fuerza a GitHub a darnos la versión más nueva de tu archivo
         const response = await fetch(`${CONFIG.MENU_URL}?t=${new Date().getTime()}`);
-        
-        if (!response.ok) {
-            throw new Error(`Error de servidor: ${response.status}`);
-        }
+        if (!response.ok) throw new Error("No se pudo descargar el JSON");
 
         const data = await response.json();
-        console.log("Datos cargados correctamente:", data);
+        console.log("Datos recibidos:", data);
 
-        // Procesar y limpiar datos (Previene errores de $NaN y nombres mal escritos)
+        // MAPEO INTELIGENTE: Detecta inglés o español y limpia el precio
         menuData = data.map((item, index) => {
-            // Limpieza de precio: quita "$", espacios y comas
-            let rawPrice = item.precio || item.price || "0";
-            let cleanPrice = parseFloat(String(rawPrice).replace(/[^0-9.]/g, '')) || 0;
+            // 1. Detectar el nombre
+            const nombreFinal = item.nombre || item.name || "Producto sin nombre";
+            
+            // 2. Limpiar el precio (Quita $, comas y espacios)
+            let pRaw = item.precio || item.price || "0";
+            let pClean = String(pRaw).replace(/[^0-9.]/g, ''); 
+            let pNum = parseFloat(pClean) || 0;
 
+            // 3. Detectar el resto de campos
             return {
                 id: item.id || index + 1,
-                nombre: item.nombre || item.name || "Producto sin nombre",
-                precio: cleanPrice,
-                descripcion: item.descripcion || item.description || "Sin descripción disponible",
+                nombre: nombreFinal,
+                precio: pNum,
+                descripcion: item.descripcion || item.description || "",
                 categoria: item.categoria || item.category || "General",
-                imagen: item.imagen || item.image || "https://via.placeholder.com/150?text=Delicias"
+                imagen: item.imagen || item.image || "https://via.placeholder.com/150?text=Comida"
             };
         });
 
-        renderCategories();
-        renderMenu(menuData);
+        console.log("Datos procesados listos:", menuData);
+
+        if (menuData.length > 0) {
+            renderCategories();
+            renderMenu(menuData);
+        } else {
+            grid.innerHTML = "<p>El menú está vacío.</p>";
+        }
 
     } catch (err) {
-        console.error("Error crítico en app.js:", err);
-        grid.innerHTML = `
-            <div style="padding:50px; text-align:center; font-family:sans-serif;">
-                <i class="ph ph-warning-circle" style="font-size:3rem; color:#ff4444;"></i>
-                <h3 style="margin-top:15px;">No se pudo mostrar el menú</h3>
-                <p style="color:gray; font-size:0
+        console.error("Error cargando el menú:", err);
+        grid.innerHTML = `<div style="padding:20px; color:red;">Error de carga. Revisa que el JSON en GitHub sea válido.</div>`;
+    }
+}
+
+function renderCategories() {
+    const container = document.getElementById('categories-container');
+    if (!container) return;
+    
+    const categories = ["Todos", ...new Set(menuData.map(item => item.categoria))];
+    container.innerHTML = categories.map(cat => `
+        <div class="category-chip ${cat === 'Todos' ? 'active' : ''}" onclick="filterByCategory('${cat}', this)">
+            ${cat}
+        </div>
+    `).join('');
+}
+
+function renderMenu(items) {
+    const grid = document.getElementById('menu-grid');
+    if (!grid) return;
+
+    grid.innerHTML = items.map(item => `
+        <article class="product-card" onclick="addToCart(${item.id})">
+            <div class="product-info">
+                <h3>${item.nombre}</h3>
+                <p>${item.descripcion}</p>
+                <span class="product-price">$${item.precio.toFixed(2)}</span>
+            </div>
+            <img src="${item.imagen}" class="product-img" onerror="this.src='https://via.placeholder.com/150'">
+        </article>
+    `).join('');
+}
+
+function addToCart(id) {
+    const item = menuData.find(p => p.id == id);
+    if (item) {
+        cart.push(item);
+        if ("vibrate" in navigator) navigator.vibrate(50);
+        updateCartUI();
+    }
+}
+
+function updateCartUI() {
+    const btn = document.getElementById('cart-floating-btn');
+    const total = cart.reduce((sum, item) => sum + item.precio, 0);
+    if (cart.length > 0) {
+        btn.classList.remove('hidden');
+        document.getElementById('cart-count').innerText = `${cart.length} items`;
+        document.getElementById('cart-total').innerText = `$${total.toFixed(2)}`;
+    }
+}
+
+window.filterByCategory = function(cat, element) {
+    document.querySelectorAll('.category-chip').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    const filtered = cat === "Todos" ? menuData : menuData.filter(p => p.categoria === cat);
+    renderMenu(filtered);
+};
+
+// Checkout por WhatsApp
+document.getElementById('cart-floating-btn').addEventListener('click', () => {
+    const subtotal = cart.reduce((sum, item) => sum + item.precio, 0);
+    const total = subtotal + CONFIG.DELIVERY_FEE;
+    let texto = cart.map(i => `- ${i.nombre} ($${i.precio.toFixed(2)})`).join('%0A');
+    const msg = `*Orden Delicias*%0A${texto}%0A*Total:* $${total.toFixed(2)}`;
+    window.open(`https://wa.me/${CONFIG.WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+});
+
+// Arrancar app
+init();
