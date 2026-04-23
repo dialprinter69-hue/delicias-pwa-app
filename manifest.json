@@ -1,0 +1,10 @@
+{
+  "name": "Delicias · Sabor casero",
+  "short_name": "Delicias",
+  "description": "Pedido y entrega de comida casera.",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF6EF",
+  "theme_color": "#8B1E3F"
+}

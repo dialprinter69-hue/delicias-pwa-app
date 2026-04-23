@@ -1,0 +1,10 @@
+# Nested repo (menu data lives in its own GitHub repo)
+delicia-menu/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
