@@ -2,53 +2,22 @@ const WHATSAPP_NUMBER = "19785027983";
 const CASHAPP = "$AleshkaMatos6";
 const DELIVERY_FEE = 4;
 
-/* IDs que deben tratarse como postres (si vienen en menu.json).
-   Se filtran del menú principal; usamos nuestra lista POSTRES_CATALOG. */
-const DESSERT_IDS = new Set(["dish-tres-leches", "dish-flan", "dish-quesillo"]);
-
-/* Catálogo de postres con variantes de tamaño. */
-const TRAY_PRICE = 25;
-
-const POSTRES_CATALOG = [
-  {
-    id: "dessert-tres-leches",
-    name: "Tres Leches",
-    description: "Bizcocho empapado en tres leches, crema, caramelo, canela, fresa y cerezas.",
-    imageUrl: "https://raw.githubusercontent.com/dialprinter69-hue/delicia-menu/refs/heads/main/images/menu_tres_leches.png",
-    sizes: [
-      { id: "individual", label: "Porción individual", desc: "Para 1 persona", price: 5 },
-      { id: "bandeja", label: "Bandeja", desc: "Para compartir (8–10 porciones)", price: TRAY_PRICE, badge: "Familiar" }
-    ]
-  },
-  {
-    id: "dessert-flan-queso",
-    name: "Flan de Queso",
-    description: "Flan cremoso de queso con caramelo casero, textura suave y sabor intenso.",
-    imageUrl: "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80",
-    sizes: [
-      { id: "individual", label: "Porción individual", desc: "Para 1 persona", price: 5 },
-      { id: "bandeja", label: "Bandeja", desc: "Para compartir (8–10 porciones)", price: TRAY_PRICE, badge: "Familiar" }
-    ]
-  },
-  {
-    id: "dessert-flan-vainilla",
-    name: "Flan de Vainilla",
-    description: "Flan clásico de vainilla con caramelo dorado, suave y sedoso.",
-    imageUrl: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=800&q=80",
-    sizes: [
-      { id: "individual", label: "Porción individual", desc: "Para 1 persona", price: 5 },
-      { id: "bandeja", label: "Bandeja", desc: "Para compartir (8–10 porciones)", price: TRAY_PRICE, badge: "Familiar" }
-    ]
-  }
-];
+/* Fallback: IDs legados que deben tratarse como postres aunque no tengan category. */
+const LEGACY_DESSERT_IDS = new Set(["dish-tres-leches"]);
 
 let MAINS = [];
-let POSTRES = [...POSTRES_CATALOG];
+let POSTRES = [];
 let cart = [];
 
 /* Contexto temporal para el modal de postres */
 let pendingDessert = null;
 let pendingSizeId = null;
+
+function isDessert(item) {
+  if (item && item.category === "dessert") return true;
+  if (item && LEGACY_DESSERT_IDS.has(item.id)) return true;
+  return false;
+}
 
 /* =========================
    HELPERS
@@ -62,10 +31,12 @@ function parsePrice(value) {
 }
 
 function normalizeItem(item) {
-  return {
-    ...item,
-    price: parsePrice(item.price)
-  };
+  const normalized = { ...item };
+  if (item.price !== undefined) normalized.price = parsePrice(item.price);
+  if (Array.isArray(item.sizes)) {
+    normalized.sizes = item.sizes.map(s => ({ ...s, price: parsePrice(s.price) }));
+  }
+  return normalized;
 }
 
 function formatMoney(n) {
@@ -93,23 +64,26 @@ function formatFriendlyDate(iso) {
 /* =========================
    LOAD MENU FROM GITHUB
 ========================= */
-fetch("https://raw.githubusercontent.com/dialprinter69-hue/delicia-menu/main/menu.json")
+fetch("https://raw.githubusercontent.com/dialprinter69-hue/delicia-menu/main/menu.json", { cache: "no-cache" })
   .then(res => res.json())
   .then(data => {
     const all = data.map(normalizeItem);
 
-    if (all.length > 0) {
-      all[0] = {
-        ...all[0],
-        id: "dish-pechuga-rellena",
-        name: "Pechuga Rellena",
-        description: "Pechuga de pollo rellena con queso cheddar, envuelta en bacon y servida con salsa cremosa.",
-        price: 16,
-        imageUrl: "file:///C:/Users/Asus/.cursor/projects/c-Users-Asus-Desktop-delicias-pwa-app/assets/c__Users_Asus_AppData_Roaming_Cursor_User_workspaceStorage_empty-window_images_pechuga_rellena-075cc4c0-6902-490d-bfd7-753e439d20e0.png"
-      };
-    }
-
-    MAINS = all.filter(it => !DESSERT_IDS.has(it.id));
+    MAINS = all.filter(it => !isDessert(it));
+    POSTRES = all.filter(isDessert).map(item => {
+      /* Si un postre viejo (legacy) no tiene sizes, creamos variantes por defecto. */
+      if (!Array.isArray(item.sizes) || item.sizes.length === 0) {
+        const base = item.price || 5;
+        return {
+          ...item,
+          sizes: [
+            { id: "individual", label: "Porción individual", desc: "Para 1 persona", price: base },
+            { id: "bandeja", label: "Bandeja", desc: "Para compartir (8–10 porciones)", price: 25, badge: "Familiar" }
+          ]
+        };
+      }
+      return item;
+    });
 
     renderMenu();
     renderPostres();
@@ -123,9 +97,6 @@ fetch("https://raw.githubusercontent.com/dialprinter69-hue/delicia-menu/main/men
     `;
     renderPostres();
   });
-
-/* Renderizamos los postres de inmediato (no dependen del fetch). */
-renderPostres();
 
 /* =========================
    ICONS (inline SVG)
